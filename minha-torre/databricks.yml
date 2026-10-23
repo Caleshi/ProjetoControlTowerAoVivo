@@ -4,20 +4,24 @@ bundle:
 variables:
   sql_warehouse_id:
     description: SQL Warehouse ID
+  genie_space_id:
+    description: Id do Genie "Farol · Diretoria" (recurso genie_farol do bundle vertice, pelo bundle summary)
+  genie_space_name:
+    description: Título do Genie
 
 resources:
   apps:
     app:
       name: "minha-torre"
-      description: "Projeto Farol da Vértice: projetos em risco e simulador de realocação"
+      description: "Projeto Farol da Vértice: projetos em risco, simulador de realocação e perguntas ao Genie"
       source_code_path: ./
 
       # Start the app automatically on deploy.
       lifecycle:
         started: true
-      # Uncomment to enable on behalf of user API scopes. Available scopes: sql, genie, files, model-serving
-      # user_api_scopes:
-      #   - sql
+      # O Genie roda em nome de quem está logado: cada pessoa vê só o que pode ver.
+      user_api_scopes:
+        - dashboards.genie
 
       # The resources which this app has access to.
       resources:
@@ -25,6 +29,11 @@ resources:
           sql_warehouse:
             id: ${var.sql_warehouse_id}
             permission: CAN_USE
+        - name: genie-space
+          genie_space:
+            name: ${var.genie_space_name}
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
 
 targets:
   default:
@@ -34,3 +43,6 @@ targets:
 
     variables:
       sql_warehouse_id: 8cb12bbdb6c6f326
+      # O Genie nasce no bundle vertice: o id muda a cada workspace.
+      genie_space_id: 01f1ce7e8ab114e8b6ec6d2f1421e3a8
+      genie_space_name: Farol · Diretoria

@@ -30,7 +30,7 @@ variables:
     default: lakehouse_vertice
   warehouse_id:
     description: SQL Warehouse serverless que executa as tarefas SQL
-    default: 666be37e3fededf2
+    default: 8cb12bbdb6c6f326
 
   # O data lake da noite 2 (Supabase Storage, protocolo S3). Endereço e região
   # não são segredo; as duas chaves são. Elas NÃO têm default: o valor fica em

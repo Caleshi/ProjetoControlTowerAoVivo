@@ -17,18 +17,19 @@
 CREATE OR REPLACE VIEW lakehouse_vertice.gold.mv_projetos
 WITH METRICS
 LANGUAGE YAML
-COMMENT 'KPIs dos projetos em andamento na fotografia de hoje (16/10/2026), sobre as tarefas das 3 ferramentas. Regras de corte: SPI ou CPI < 0,9 atenção; < 0,8 crítico.'
+COMMENT 'KPIs dos projetos em andamento na fotografia de hoje (16/10/2026), sobre as tarefas das 3 ferramentas. Regras de corte: SPI ou CPI abaixo de 0,9 é atenção, abaixo de 0,8 é crítico.'
 AS $$
 version: 1.1
 source: lakehouse_vertice.gold.projeto_situacao_atual
 filter: status = 'em_andamento'
 dimensions:
   - name: projeto_id
-    expr: projeto_id
-    comment: Código do projeto, como PRJ-011
-  - name: projeto
     expr: projeto
-    comment: Código e nome do projeto
+    comment: Código do projeto, como PRJ-011 (na gold a coluna se chama projeto)
+    synonyms: [código do projeto]
+  - name: projeto
+    expr: nome_projeto
+    comment: Nome do projeto com o cliente, como Integração omnichannel - Moda Viva Lojas
     synonyms: [nome do projeto]
   - name: cliente
     expr: cliente

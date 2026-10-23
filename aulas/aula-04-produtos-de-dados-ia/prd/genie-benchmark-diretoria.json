@@ -57,11 +57,11 @@
   },
   {
     "pergunta": "Qual fornecedor mais atrasa as entregas?",
-    "sql_referencia": "SELECT fornecedor FROM lakehouse_vertice.silver.entregas_fornecedor GROUP BY fornecedor ORDER BY AVG(prazo_real_dias / prazo_prometido_dias) DESC LIMIT 1"
+    "sql_referencia": "SELECT fornecedor FROM lakehouse_vertice.gold.entregas_fornecedor GROUP BY fornecedor ORDER BY AVG(prazo_real_dias / prazo_prometido_dias) DESC LIMIT 1"
   },
   {
     "pergunta": "Quantas entregas de fornecedor estão em atraso hoje?",
-    "sql_referencia": "SELECT COUNT(*) FROM lakehouse_vertice.silver.entregas_fornecedor WHERE em_atraso"
+    "sql_referencia": "SELECT COUNT(*) FROM lakehouse_vertice.gold.entregas_fornecedor WHERE em_atraso"
   },
   {
     "pergunta": "Quais projetos de e-commerce em andamento ficam travados pelo change freeze da Black Friday?",
