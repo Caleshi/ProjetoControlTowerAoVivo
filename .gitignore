@@ -1,0 +1,7 @@
+# Estado local da CLI (inclui as chaves do data lake em variable-overrides.json).
+.databricks/
+node_modules/
+.env
+__pycache__/
+.venv/
+.DS_Store

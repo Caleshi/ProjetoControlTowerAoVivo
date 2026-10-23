@@ -1,0 +1,65 @@
+# Projeto Farol · a Torre de Controle da Vértice Tecnologia.
+#
+# Este bundle nasce à mão (bundle init + generate) na noite 3, importando o job "Ingestão" que a
+# turma montou clicando na noite 2, e ganha uma camada por prompt. Deploy não é
+# etapa de fim de projeto, é rotina.
+#
+#   noite 3: ingestão → conferência da bronze → silver (as 3 ferramentas viram uma)
+#            → gold + testes → IA nos textos → dashboard
+#   noite 4: modelo de estouro → métrica governada + Genie → app (outro bundle, torre-app)
+#
+# Tudo roda em serverless: o Databricks Free Edition não tem cluster clássico.
+
+bundle:
+  name: vertice
+
+include:
+  - resources/*.yml
+
+# O app da noite 4 (minha-torre/) é um bundle próprio. Sem esta linha o deploy
+# do vertice sobe a pasta inteira do app, node_modules incluído.
+sync:
+  exclude:
+    - "minha-torre/**"
+
+# Catálogo e warehouse ficam em variável para que o mesmo código rode em dev e
+# em prod sem uma linha editada. É o mínimo que separa "script" de "projeto".
+variables:
+  catalog:
+    description: Catálogo do Unity Catalog onde as três camadas moram (criado na noite 1)
+    default: lakehouse_vertice
+  warehouse_id:
+    description: SQL Warehouse serverless que executa as tarefas SQL
+    default: 666be37e3fededf2
+
+  # O data lake da noite 2 (Supabase Storage, protocolo S3). Endereço e região
+  # não são segredo; as duas chaves são. Elas NÃO têm default: o valor fica em
+  # .databricks/bundle/dev/variable-overrides.json, que o .gitignore deixa fora do Git.
+  s3_endpoint:
+    description: Endereço S3 do Supabase Storage
+    default: https://xqdzgjrdcimcagvxzwuo.storage.supabase.co/storage/v1/s3
+  s3_regiao:
+    description: Região do Supabase Storage
+    default: us-east-1
+  s3_access_key_id:
+    description: Chave de acesso do data lake (segredo, fora do Git)
+  s3_secret_access_key:
+    description: Segredo do data lake (segredo, fora do Git)
+
+targets:
+  dev:
+    default: true
+    # NÃO usamos `mode: development` de propósito. Ele prefixaria os nomes com
+    # [dev seu_usuario] — inclusive os datasets do pipeline — e quebraria todo o
+    # SQL da noite. Em troca, pausamos o agendamento na mão: ninguém quer o job
+    # da aula acordando às 6h de sábado e gastando a cota do Free Edition.
+    presets:
+      trigger_pause_status: PAUSED
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    permissions:
+      - user_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE

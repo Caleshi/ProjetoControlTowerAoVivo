@@ -1,0 +1,22 @@
+# Dashboard como CÓDIGO.
+#
+# Ontem a turma viu dashboard feito sobre a bronze, com CASE, replace e número de
+# série do Excel em todo dataset. Este lê a GOLD e as metric views: o SQL encolheu
+# porque a integração e a limpeza moram na silver, e o SPI do card é a MESMA
+# fórmula que o Genie usa.
+#
+# É um JSON no Git (gerado por scripts/gerar_dashboard.py): tem diff, revisão
+# e rollback. dataset_catalog e dataset_schema deixam as queries com nome de
+# tabela puro (`FROM projeto_situacao_atual`).
+#
+# A chave dashboard_portfolio NÃO pode ser renomeada: o bundle identifica o
+# dashboard por ela. Trocar a chave apaga o dashboard e cria outro, com URL nova.
+
+resources:
+  dashboards:
+    dashboard_portfolio:
+      display_name: Projeto Farol · Portfólio
+      file_path: ../resources/dashboard-portfolio.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: gold

@@ -1,0 +1,24 @@
+# O medalhão como pipeline DECLARATIVO (Lakeflow Spark Declarative Pipelines).
+#
+# A diferença para um script: aqui você declara O QUE cada tabela é, e o
+# Lakeflow descobre a ordem sozinho, lendo os FROM de cada SQL. Ele desenha o
+# grafo, roda em paralelo o que dá e mostra quantas linhas cada regra de
+# qualidade (EXPECT) recusou.
+#
+# Silver e gold moram no mesmo pipeline: o schema padrão é a silver e os
+# arquivos da gold escrevem com o nome completo lakehouse_vertice.gold.x.
+
+resources:
+  pipelines:
+    vertice_medalhao:
+      name: vertice_medalhao
+      catalog: ${var.catalog}
+      schema: silver
+      serverless: true
+      photon: true
+      channel: CURRENT
+      libraries:
+        - glob:
+            include: ../src/silver/**
+        - glob:
+            include: ../src/gold/**

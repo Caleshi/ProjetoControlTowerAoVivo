@@ -1,0 +1,126 @@
+# O job do Projeto Farol: a Torre inteira, toda segunda às 6h.
+#
+# Abra o DAG no workspace depois de cada deploy: o desenho crescendo é a melhor
+# tela da aula.
+#
+#   noite 3 · à mão     ingestao_feriados + ingestao_data_lake (o job "Ingestão" da noite 2,
+#                       agora como código) → conferencia_bronze
+#   noite 3 · prompt 1  + medalhao (pipeline Lakeflow: silver, as 3 ferramentas viram uma)
+#   noite 3 · prompt 2  + (o mesmo pipeline ganha a gold) + testes_de_qualidade
+#   noite 3 · prompt 3  + status_com_ia, e o agendamento de segunda
+#   noite 4 · prompt 1  + ml_features → ml_modelo → ml_score
+#   noite 4 · prompt 2  + metricas_governadas
+#
+# A ordem não é sugestão: cada camada lê a anterior. Se a conferência da bronze
+# falhar, nada roda. É isso que impede o dashboard de mostrar meio dado com
+# cara de dado inteiro.
+
+resources:
+  jobs:
+    vertice_farol:
+      name: vertice_farol
+      description: Projeto Farol da Vértice Tecnologia. Ingestão do data lake, conferência, medalhão (Excel + ClickUp + MS Project), testes, IA nos status semanais, o modelo de estouro e a métrica governada.
+
+      # Toda segunda às 6h, depois do status de sexta (pausado em dev pelo preset do databricks.yml).
+      schedule:
+        quartz_cron_expression: "0 0 6 ? * MON"
+        timezone_id: America/Sao_Paulo
+
+      # Uma execução por vez: duas ao mesmo tempo apagariam a bronze uma da outra.
+      max_concurrent_runs: 1
+
+      # O ambiente serverless dos notebooks (o boto3 já vem instalado na versão 6).
+      environments:
+        - environment_key: padrao
+          spec:
+            environment_version: "6"
+
+      tasks:
+        # ── 0. a ingestão da noite 2, agora como código ───────────────
+        # A API de feriados e o data lake (Supabase Storage via boto3).
+        - task_key: ingestao_feriados
+          environment_key: padrao
+          notebook_task:
+            notebook_path: ../src/ingestao/01_ingestao_api.py
+
+        # As chaves NÃO ficam neste arquivo: são variáveis do bundle, com o valor
+        # em .databricks/bundle/dev/variable-overrides.json (fora do Git).
+        - task_key: ingestao_data_lake
+          environment_key: padrao
+          notebook_task:
+            notebook_path: ../src/ingestao/02_ingestao_boto3.py
+            base_parameters:
+              S3_ENDPOINT: ${var.s3_endpoint}
+              AWS_DEFAULT_REGION: ${var.s3_regiao}
+              AWS_ACCESS_KEY_ID: ${var.s3_access_key_id}
+              AWS_SECRET_ACCESS_KEY: ${var.s3_secret_access_key}
+
+        # ── 1. a bronze chegou inteira? ───────────────────────────────
+        - task_key: conferencia_bronze
+          depends_on:
+            - { task_key: ingestao_feriados }
+            - { task_key: ingestao_data_lake }
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/conferencia/00-conferencia-bronze.sql
+
+        # ── 2. o medalhão: silver e gold num pipeline declarativo ─────
+        - task_key: medalhao
+          depends_on: [{ task_key: conferencia_bronze }]
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.vertice_medalhao.id}
+
+        # ── 3. os testes que quebram o job antes de quebrar o dashboard
+        - task_key: testes_de_qualidade
+          depends_on: [{ task_key: medalhao }]
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/testes/testes.sql
+
+        # ── 4. o texto livre do status vira coluna ────────────────────
+        - task_key: status_com_ia
+          depends_on: [{ task_key: medalhao }]
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/ia/status_estruturado.sql
+
+        # ── noite 4 · ML é mais uma camada do mesmo job ───────────────
+        # 5. as features: uma linha por projeto e semana, só olhando para trás
+        - task_key: ml_features
+          depends_on:
+            - { task_key: testes_de_qualidade }
+            - { task_key: status_com_ia }
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/ml/01-features.sql
+
+        # 6. o modelo: baseline, treino, testes, MLflow e Unity Catalog (@prod)
+        - task_key: ml_modelo
+          depends_on: [{ task_key: ml_features }]
+          notebook_task:
+            notebook_path: ../src/ml/02-modelo.py
+            base_parameters:
+              catalog: ${var.catalog}
+
+        # 7. o score de hoje: a lista que o dono abre na segunda
+        - task_key: ml_score
+          depends_on: [{ task_key: ml_modelo }]
+          notebook_task:
+            notebook_path: ../src/ml/03-score.py
+            base_parameters:
+              catalog: ${var.catalog}
+
+        # ── noite 4 · o KPI definido uma vez só ───────────────────────
+        # 8. a metric view que o Genie e o app usam
+        - task_key: metricas_governadas
+          depends_on:
+            - { task_key: testes_de_qualidade }
+            - { task_key: status_com_ia }
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/metricas/metricas.sql
